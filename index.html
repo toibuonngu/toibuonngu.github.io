@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Alex Morgan — Front-End Developer</title>
+<title>Jia Fu — Software Engineer</title>
 
 <style>
-  /* ============ THEMETOKENS ============ */
+  /* ============ THEME TOKENS ============ */
   :root {
     --bg: #eef1fa;
     --card: rgba(255, 255, 255, .72);
@@ -108,11 +108,7 @@
   }
 
   /* ============ WRAPPER + GLOW ============ */
-  .wrap {
-    max-width: 900px;
-    margin: 0 auto;
-    position: relative;
-  }
+  .wrap { max-width: 900px; margin: 0 auto; position: relative; }
 
   .glow {
     position: absolute;
@@ -133,7 +129,7 @@
     50%      { background-position: 100% 50%; }
   }
 
-  /* ============ CARD CHÍNH (GLASSMORPHISM) ============ */
+  /* ============ CARD CHÍNH ============ */
   .profile {
     position: relative;
     z-index: 1;
@@ -147,7 +143,6 @@
     transition: background .5s ease, border-color .5s ease, box-shadow .5s ease;
   }
 
-  /* Spotlight theo chuột trên toàn card */
   .profile::after {
     content: "";
     position: absolute;
@@ -191,7 +186,7 @@
   }
   .header > * { position: relative; z-index: 2; }
 
-  /* ---- Avatar với vòng xoay gradient ---- */
+  /* ---- Avatar ---- */
   .avatar-wrap {
     position: relative;
     width: 150px;
@@ -249,7 +244,7 @@
   }
   @keyframes shine { to { background-position: 200% center; } }
 
-  /* ---- Vai trò + con trỏ gõ chữ ---- */
+  /* ---- Vai trò + caret ---- */
   .role {
     color: rgba(255, 255, 255, .94);
     font-weight: 500;
@@ -269,7 +264,7 @@
   }
   @keyframes blink { 50% { opacity: 0; } }
 
-  /* ---- Trạng thái available ---- */
+  /* ---- Trạng thái ---- */
   .status {
     display: inline-flex;
     align-items: center;
@@ -304,11 +299,7 @@
   }
 
   /* ============ NỘI DUNG ============ */
-  .body {
-    padding: 34px 30px 38px;
-    display: grid;
-    gap: 36px;
-  }
+  .body { padding: 34px 30px 38px; display: grid; gap: 36px; }
 
   .section-title {
     display: flex;
@@ -328,13 +319,9 @@
     background: linear-gradient(90deg, var(--border-soft), transparent);
   }
 
-  .bio {
-    color: var(--muted);
-    max-width: 64ch;
-    font-size: .97rem;
-  }
+  .bio { color: var(--muted); max-width: 64ch; font-size: .97rem; }
 
-  /* ---- Reveal khi cuộn ---- */
+  /* ---- Reveal ---- */
   .reveal {
     opacity: 0;
     transform: translateY(26px);
@@ -391,7 +378,6 @@
     border: 1px solid var(--border-soft);
     overflow: hidden;
     transform-style: preserve-3d;
-    transition: box-shadow .35s ease, border-color .35s ease;
     opacity: 0;
     transform: translateY(20px);
     transition: opacity .6s ease, transform .6s cubic-bezier(.2, .7, .3, 1),
@@ -400,7 +386,6 @@
   }
   .reveal.in .project { opacity: 1; transform: none; }
 
-  /* Spotlight bên trong mỗi card dự án */
   .project::before {
     content: "";
     position: absolute;
@@ -453,67 +438,6 @@
     background: color-mix(in srgb, var(--accent-2) 12%, transparent);
   }
 
-  /* ============ BUTTONS ============ */
-  .links { display: flex; flex-wrap: wrap; gap: 11px; }
-
-  .btn {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 9px;
-    padding: 11px 20px;
-    border-radius: 13px;
-    font-size: .9rem;
-    font-weight: 600;
-    text-decoration: none;
-    color: var(--text);
-    background: var(--card-solid);
-    border: 1px solid var(--border-soft);
-    overflow: hidden;
-    transition: transform .25s cubic-bezier(.2, .7, .3, 1),
-                color .25s, border-color .25s, box-shadow .25s;
-  }
-
-  /* Hiệu ứng ánh sáng quét qua */
-  .btn::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -130%;
-    width: 55%;
-    height: 100%;
-    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .6), transparent);
-    transform: skewX(-20deg);
-    transition: left .65s ease;
-    pointer-events: none;
-  }
-  .btn:hover::after { left: 140%; }
-
-  .btn:hover {
-    transform: translateY(-3px);
-    color: var(--accent);
-    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-    box-shadow: 0 12px 26px color-mix(in srgb, var(--accent) 22%, transparent);
-  }
-
-  .btn.primary {
-    color: #fff;
-    border: 0;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    background-size: 200% 200%;
-    animation: gradientMove 6s ease infinite;
-    box-shadow: 0 10px 26px color-mix(in srgb, var(--accent) 40%, transparent);
-  }
-  .btn.primary:hover {
-    color: #fff;
-    filter: brightness(1.08);
-    box-shadow: 0 16px 34px color-mix(in srgb, var(--accent) 55%, transparent);
-  }
-  .btn.primary::after { background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .75), transparent); }
-
-  .btn svg { width: 17px; height: 17px; flex: none; transition: transform .3s ease; }
-  .btn:hover svg { transform: scale(1.15) rotate(-6deg); }
-
   /* ============ FOOTER ============ */
   .footer {
     text-align: center;
@@ -559,7 +483,6 @@
     .blob { filter: blur(70px); }
   }
 
-  /* ============ TÔN TRỌNG REDUCED MOTION ============ */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: .01ms !important;
@@ -573,14 +496,12 @@
 
 <body>
 
-<!-- Nền blob chuyển động -->
 <div class="bg-blobs" aria-hidden="true">
   <div class="blob b1"></div>
   <div class="blob b2"></div>
   <div class="blob b3"></div>
 </div>
 
-<!-- Thanh tiến trình cuộn -->
 <div class="progress" id="progress" aria-hidden="true"></div>
 
 <div class="wrap">
@@ -594,16 +515,16 @@
 
       <div class="avatar-wrap">
         <div class="avatar-ring" aria-hidden="true"></div>
-        <!-- Thay chữ AM bằng: <img src="avatar.jpg" alt="Alex Morgan"> -->
-        <div class="avatar">AM</div>
+        <!-- Thay chữ JF bằng: <img src="avatar.jpg" alt="Jia Fu"> -->
+        <div class="avatar">JF</div>
       </div>
 
-      <h1 class="name">Alex Morgan</h1>
+      <h1 class="name">Jia Fu</h1>
       <p class="role"><span id="roleText"></span><span class="caret" aria-hidden="true"></span></p>
 
       <div class="status">
         <span class="dot" aria-hidden="true"></span>
-        Đang sẵn sàng cho dự án freelance
+        Đang mở cho cơ hội mới
       </div>
     </header>
 
@@ -613,26 +534,37 @@
       <section class="reveal">
         <h2 class="section-title">Giới thiệu</h2>
         <p class="bio">
-          Tôi xây dựng những giao diện nhanh, dễ tiếp cận với trọng tâm là hệ thống
-          thiết kế gọn gàng và các vi tương tác đầy cảm hứng. Năm năm kinh nghiệm
-          biến file Figma thành mã nguồn production sẵn sàng chạy.
+          Kỹ sư phần mềm đa ngôn ngữ với hơn 8 năm kinh nghiệm xây dựng hệ thống
+          hiệu năng cao, công cụ reverse engineering và mod menu cho game.
+          Thành thạo <strong>C++</strong>, <strong>Python</strong>, <strong>Java</strong> cùng nhiều ngôn ngữ khác —
+          chuyên sâu về memory patching, hooking và phân tích binary.
         </p>
       </section>
 
       <!-- ================= KỸ NĂNG ================= -->
       <section class="reveal">
-        <h2 class="section-title">Kỹ năng</h2>
+        <h2 class="section-title">Ngôn ngữ &amp; Công nghệ</h2>
         <div class="tags" id="tags">
-          <span class="tag">HTML5</span>
-          <span class="tag">CSS / Sass</span>
+          <span class="tag">C++</span>
+          <span class="tag">Python</span>
+          <span class="tag">Java</span>
+          <span class="tag">C</span>
+          <span class="tag">Rust</span>
+          <span class="tag">Go</span>
+          <span class="tag">C#</span>
+          <span class="tag">Assembly x86/x64</span>
           <span class="tag">JavaScript</span>
           <span class="tag">TypeScript</span>
-          <span class="tag">React</span>
-          <span class="tag">Vue</span>
-          <span class="tag">Node.js</span>
-          <span class="tag">Figma</span>
-          <span class="tag">Accessibility</span>
-          <span class="tag">Git</span>
+          <span class="tag">SQL</span>
+          <span class="tag">Bash</span>
+          <span class="tag">Kotlin</span>
+          <span class="tag">Lua</span>
+          <span class="tag">IDA Pro</span>
+          <span class="tag">Ghidra</span>
+          <span class="tag">Frida</span>
+          <span class="tag">x64dbg</span>
+          <span class="tag">Cheat Engine</span>
+          <span class="tag">Docker</span>
         </div>
       </section>
 
@@ -641,60 +573,27 @@
         <h2 class="section-title">Dự án tiêu biểu</h2>
         <div class="grid" id="grid">
           <a class="project" href="#" target="_blank" rel="noopener">
-            <h3>Pulse Analytics</h3>
-            <p>Bảng điều khiển thời gian thực với biểu đồ tùy biến và chế độ tối.</p>
-            <span class="stack">React · D3 · Tailwind</span>
+            <h3>Crack Menu</h3>
+            <p>Menu overlay đa nền tảng với ESP, aimbot, teleport cho game single-player.</p>
+            <span class="stack">C++ · ImGui · DirectX</span>
           </a>
 
           <a class="project" href="#" target="_blank" rel="noopener">
-            <h3>Orbit Commerce</h3>
-            <p>Cửa hàng headless đạt điểm hiệu năng Lighthouse 98.</p>
-            <span class="stack">Next.js · Stripe</span>
+            <h3>Hack Toolkit</h3>
+            <p>Bộ công cụ memory scanner &amp; patcher, hỗ trợ hook hàm và bypass anti-cheat.</p>
+            <span class="stack">Python · Frida · Assembly</span>
           </a>
 
           <a class="project" href="#" target="_blank" rel="noopener">
-            <h3>Nomad Notes</h3>
-            <p>Ứng dụng ghi chú PWA hoạt động offline, đồng bộ cục bộ.</p>
-            <span class="stack">Vue · IndexedDB</span>
-          </a>
-        </div>
-      </section>
-
-      <!-- ================= LIÊN HỆ ================= -->
-      <section class="reveal">
-        <h2 class="section-title">Kết nối</h2>
-        <div class="links">
-          <a class="btn primary" href="mailto:alex@example.com">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-              <path d="m22 7-10 6L2 7"></path>
-            </svg>
-            Gửi email
+            <h3>Crack App</h3>
+            <p>Ứng dụng deobfuscate &amp; phân tích binary, tự động patch license check.</p>
+            <span class="stack">Java · Ghidra API · JNI</span>
           </a>
 
-          <a class="btn" href="https://github.com/" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.1c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.4-1.3-5.4-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.5 4.7 18.5 5 18.5 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.4 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5Z"/>
-            </svg>
-            GitHub
-          </a>
-
-          <a class="btn" href="https://linkedin.com/" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9h4v12H3V9Zm6.5 0h3.8v1.7h.1c.5-1 1.8-2 3.7-2 4 0 4.7 2.5 4.7 5.8V21h-4v-5.6c0-1.3 0-3-1.9-3s-2.2 1.4-2.2 2.9V21h-4V9Z"/>
-            </svg>
-            LinkedIn
-          </a>
-
-          <a class="btn" href="#" download>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <path d="M7 10l5 5 5-5"></path>
-              <path d="M12 15V3"></path>
-            </svg>
-            Tải CV
+          <a class="project" href="#" target="_blank" rel="noopener">
+            <h3>Mod Loader</h3>
+            <p>Trình nạp mod DLL động, hỗ trợ hot-reload và inject an toàn vào process.</p>
+            <span class="stack">C++ · Rust · Windows API</span>
           </a>
         </div>
       </section>
@@ -702,7 +601,7 @@
     </div>
 
     <footer class="footer">
-      © <span id="year"></span> <span>Alex Morgan</span> — Viết tay từ đầu.
+      © <span id="year"></span> <span>Jia Fu</span> — Viết tay từ đầu.
     </footer>
   </main>
 </div>
@@ -711,7 +610,7 @@
 /* ================= 1. NĂM HIỆN TẠI ================= */
 document.getElementById('year').textContent = new Date().getFullYear();
 
-/* ================= 2. ĐỔI THEME (lưu lựa chọn) ================= */
+/* ================= 2. ĐỔI THEME ================= */
 const root   = document.documentElement;
 const toggle = document.getElementById('themeToggle');
 const saved  = localStorage.getItem('theme');
@@ -728,10 +627,10 @@ toggle.addEventListener('click', () => {
 
 /* ================= 3. HIỆU ỨNG GÕ CHỮ ================= */
 const roles = [
-  'Front-End Developer & UI Engineer',
-  'Design Systems Architect',
-  'CSS Animator',
-  'Accessibility Advocate'
+  'Software Engineer · C++ / Python / Java',
+  'Reverse Engineer & Mod Developer',
+  'Memory Patching Specialist',
+  'Open-Source Contributor'
 ];
 const roleEl = document.getElementById('roleText');
 let ri = 0, ci = 0, deleting = false;
@@ -759,7 +658,7 @@ let ri = 0, ci = 0, deleting = false;
   setTimeout(type, 28);
 })();
 
-/* ================= 4. CHỈ SỐ STAGGER CHO TAG & PROJECT ================= */
+/* ================= 4. STAGGER CHO TAG & PROJECT ================= */
 document.querySelectorAll('.tag').forEach((el, i) => el.style.setProperty('--i', i));
 document.querySelectorAll('.project').forEach((el, i) => el.style.setProperty('--i', i));
 
@@ -775,7 +674,7 @@ const io = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 
-/* ================= 6. SPOTLIGHT THEO CHUỘT TRÊN CARD ================= */
+/* ================= 6. SPOTLIGHT THEO CHUỘT ================= */
 const profile = document.getElementById('profile');
 let rafProfile = null;
 
@@ -789,7 +688,7 @@ profile.addEventListener('mousemove', (e) => {
   });
 });
 
-/* ================= 7. NGHIÊNG 3D + SPOTLIGHT CHO PROJECT CARD ================= */
+/* ================= 7. NGHIÊNG 3D CHO PROJECT CARD ================= */
 const canTilt = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 document.querySelectorAll('.project').forEach((card) => {
@@ -802,11 +701,9 @@ document.querySelectorAll('.project').forEach((card) => {
       const x = e.clientX - r.left;
       const y = e.clientY - r.top;
 
-      // Spotlight bên trong card
       card.style.setProperty('--mx', x + 'px');
       card.style.setProperty('--my', y + 'px');
 
-      // Nghiêng 3D nhẹ
       if (canTilt) {
         const rx = ((y / r.height) - 0.5) * -9;
         const ry = ((x / r.width)  - 0.5) *  9;
