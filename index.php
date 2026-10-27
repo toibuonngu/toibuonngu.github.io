@@ -7,7 +7,7 @@ session_start();
    1. PROFILE DATA — edit this block only
    ================================================================ */
 $profile = [
-    'name'     => 'Alex Morgan',
+    'name'     => 'AlexMorgan',
     'role'     => 'Front-End Developer & UI Engineer',
     'location' => 'Lisbon, Portugal',
     'status'   => 'Available for freelance',
