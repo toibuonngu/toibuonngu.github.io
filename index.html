@@ -1,243 +1,44 @@
-<?php
-declare(strict_types=1);
-
-session_start();
-
-/* ================================================================
-   1. PROFILE DATA — edit this block only
-   ================================================================ */
-$profile = [
-    'name'     => 'Alex Morgan',
-    'role'     => 'Front-End Developer & UI Engineer',
-    'location' => 'Lisbon, Portugal',
-    'status'   => 'Available for freelance',
-    'bio'      => 'I build fast, accessible interfaces with a focus on clean design systems '
-                . 'and delightful micro-interactions. Five years of experience turning '
-                . 'Figma files into production-ready code that ships on time.',
-    'email'    => 'alex@example.com',
-    'avatar'   => 'avatar.jpg', // put a file next to this script; falls back to initials
-
-    'skills' => [
-        'HTML5', 'CSS / Sass', 'JavaScript', 'TypeScript', 'React',
-        'Vue', 'Node.js', 'PHP', 'Figma', 'Accessibility', 'Git',
-    ],
-
-    'projects' => [
-        [
-            'title' => 'Pulse Analytics',
-            'desc'  => 'Real-time dashboard with custom charts and dark mode.',
-            'stack' => 'React · D3 · Tailwind',
-            'url'   => 'https://example.com/pulse',
-        ],
-        [
-            'title' => 'Orbit Commerce',
-            'desc'  => 'Headless storefront with a 98 Lighthouse performance score.',
-            'stack' => 'Next.js · Stripe',
-            'url'   => 'https://example.com/orbit',
-        ],
-        [
-            'title' => 'Nomad Notes',
-            'desc'  => 'Offline-first note-taking PWA with local sync.',
-            'stack' => 'Vue · IndexedDB',
-            'url'   => 'https://example.com/nomad',
-        ],
-    ],
-
-    'links' => [
-        ['label' => 'Email',    'url' => 'mailto:alex@example.com',  'icon' => 'mail',     'primary' => true],
-        ['label' => 'GitHub',   'url' => 'https://github.com/',       'icon' => 'github',   'primary' => false],
-        ['label' => 'LinkedIn', 'url' => 'https://linkedin.com/',     'icon' => 'linkedin', 'primary' => false],
-        ['label' => 'Résumé',   'url' => 'resume.pdf',                'icon' => 'download', 'primary' => false],
-    ],
-];
-
-/* ================================================================
-   2. HELPERS
-   ================================================================ */
-
-/** Escape any value for safe HTML output. */
-function e(mixed $value): string
-{
-    return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-}
-
-/** Inline SVG icon set (no external requests). */
-function icon(string $name): string
-{
-    $icons = [
-        'mail' => '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
-        'download' => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
-    ];
-
-    $filled = [
-        'github'   => '<path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.1c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.4-1.3-5.4-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.5 4.7 18.5 5 18.5 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.4 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5Z"/>',
-        'linkedin' => '<path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9h4v12H3V9Zm6.5 0h3.8v1.7h.1c.5-1 1.8-2 3.7-2 4 0 4.7 2.5 4.7 5.8V21h-4v-5.6c0-1.3 0-3-1.9-3s-2.2 1.4-2.2 2.9V21h-4V9Z"/>',
-    ];
-
-    if (isset($filled[$name])) {
-        return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' . $filled[$name] . '</svg>';
-    }
-
-    $path = $icons[$name] ?? $icons['mail'];
-
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
-         . 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $path . '</svg>';
-}
-
-/** Increment a file-based visitor counter safely (returns 0 if not writable). */
-function bump_counter(string $file): int
-{
-    $handle = @fopen($file, 'c+');
-    if ($handle === false) {
-        return 0;
-    }
-
-    flock($handle, LOCK_EX);
-    $count = (int) stream_get_contents($handle) + 1;
-    ftruncate($handle, 0);
-    rewind($handle);
-    fwrite($handle, (string) $count);
-    fflush($handle);
-    flock($handle, LOCK_UN);
-    fclose($handle);
-
-    return $count;
-}
-
-/* ================================================================
-   3. CONTACT FORM HANDLING  (POST → validate → redirect → PRG)
-   ================================================================ */
-
-if (empty($_SESSION['csrf'])) {
-    $_SESSION['csrf'] = bin2hex(random_bytes(16));
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $tokenOk = isset($_POST['csrf'], $_SESSION['csrf'])
-        && hash_equals($_SESSION['csrf'], (string) $_POST['csrf']);
-
-    $old = [
-        'name'    => trim((string) ($_POST['name'] ?? '')),
-        'email'   => trim((string) ($_POST['email'] ?? '')),
-        'message' => trim((string) ($_POST['message'] ?? '')),
-    ];
-
-    $errors = [];
-
-    if (!$tokenOk) {
-        $errors['form'] = 'Your session expired. Please try again.';
-    }
-
-    // Honeypot: real users never fill this hidden field
-    if (!empty($_POST['website'])) {
-        $errors['form'] = 'Spam detected.';
-    }
-
-    if (mb_strlen($old['name']) < 2 || mb_strlen($old['name']) > 60) {
-        $errors['name'] = 'Please enter your name (2–60 characters).';
-    }
-
-    if (!filter_var($old['email'], FILTER_VALIDATE_EMAIL)) {
-        $errors['email'] = 'Please enter a valid email address.';
-    }
-
-    $len = mb_strlen($old['message']);
-    if ($len < 10 || $len > 2000) {
-        $errors['message'] = 'Message must be 10–2000 characters.';
-    }
-
-    if ($errors === []) {
-        $entry = sprintf(
-            "[%s] %s <%s>\n%s\n---\n",
-            date('Y-m-d H:i:s'),
-            $old['name'],
-            $old['email'],
-            str_replace("\r", '', $old['message'])
-        );
-
-        @file_put_contents(__DIR__ . '/messages.log', $entry, FILE_APPEND | LOCK_EX);
-
-        // Optional: uncomment to also send an email
-        // @mail($profile['email'], 'New message from ' . $old['name'], $old['message'], 'From: ' . $old['email']);
-
-        unset($_SESSION['csrf']);
-        $_SESSION['flash'] = 'Thanks, ' . $old['name'] . '! Your message has been sent.';
-        $_SESSION['old']   = [];
-    } else {
-        $_SESSION['errors'] = $errors;
-        $_SESSION['old']    = $old;
-    }
-
-    // Post/Redirect/Get so refreshing never resubmits
-    $self = strtok($_SERVER['REQUEST_URI'] ?? 'index.php', '?');
-    header('Location: ' . $self . '#contact', true, 303);
-    exit;
-}
-
-/* ================================================================
-   4. READ SESSION STATE + THEME COOKIE
-   ================================================================ */
-
-$errors = $_SESSION['errors'] ?? [];
-$old    = $_SESSION['old']    ?? ['name' => '', 'email' => '', 'message' => ''];
-$flash  = $_SESSION['flash']  ?? null;
-unset($_SESSION['errors'], $_SESSION['old'], $_SESSION['flash']);
-
-$theme = $_COOKIE['theme'] ?? 'light';
-if (!in_array($theme, ['light', 'dark'], true)) {
-    $theme = 'light';
-}
-
-$views = bump_counter(__DIR__ . '/counter.txt');
-
-$initials = '';
-foreach (preg_split('/\s+/', trim($profile['name'])) as $part) {
-    if ($part !== '') {
-        $initials .= mb_strtoupper(mb_substr($part, 0, 1));
-    }
-}
-$initials = mb_substr($initials, 0, 2);
-
-$hasAvatar = $profile['avatar'] !== '' && is_file(__DIR__ . '/' . $profile['avatar']);
-?>
 <!DOCTYPE html>
-<html lang="en" data-theme="<?= e($theme) ?>">
+<html lang="vi">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title><?= e($profile['name']) ?> — <?= e($profile['role']) ?></title>
-<meta name="description" content="<?= e(mb_substr($profile['bio'], 0, 155)) ?>" />
+<title>Alex Morgan — Front-End Developer</title>
 
 <style>
-  /* ---------- Theme tokens ---------- */
+  /* ============ THEME TOKENS ============ */
   :root {
-    --bg: #f4f6fb;
-    --card: #ffffff;
+    --bg: #eef1fa;
+    --card: rgba(255, 255, 255, .72);
+    --card-solid: #ffffff;
     --text: #1b2333;
     --muted: #6b7590;
     --accent: #6c5ce7;
     --accent-2: #00c2a8;
-    --border: #e6e9f2;
-    --shadow: 0 10px 30px rgba(27, 35, 51, .08);
-    --radius: 18px;
-    --danger: #e74c3c;
-    --success: #12a87a;
+    --accent-3: #ff6bcb;
+    --border: rgba(255, 255, 255, .65);
+    --border-soft: rgba(27, 35, 51, .08);
+    --shadow: 0 18px 50px rgba(27, 35, 51, .12);
+    --radius: 22px;
+    --blob-opacity: .55;
   }
 
   [data-theme="dark"] {
-    --bg: #0e1220;
-    --card: #161c2e;
+    --bg: #080b14;
+    --card: rgba(22, 28, 46, .62);
+    --card-solid: #161c2e;
     --text: #eef1f8;
     --muted: #98a2bd;
     --accent: #8b7bff;
     --accent-2: #2ee6c5;
-    --border: #232b42;
-    --shadow: 0 10px 30px rgba(0, 0, 0, .45);
-    --danger: #ff6b5b;
-    --success: #2ee6a8;
+    --accent-3: #ff7bd5;
+    --border: rgba(255, 255, 255, .09);
+    --border-soft: rgba(255, 255, 255, .08);
+    --shadow: 0 24px 60px rgba(0, 0, 0, .55);
+    --blob-opacity: .38;
   }
 
-  /* ---------- Base ---------- */
+  /* ============ BASE ============ */
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   html { scroll-behavior: smooth; }
@@ -246,449 +47,794 @@ $hasAvatar = $profile['avatar'] !== '' && is_file(__DIR__ . '/' . $profile['avat
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: var(--bg);
     color: var(--text);
-    line-height: 1.6;
-    padding: 32px 16px 64px;
-    transition: background .3s ease, color .3s ease;
+    line-height: 1.65;
+    padding: 56px 16px 80px;
+    min-height: 100vh;
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    transition: background .5s ease, color .5s ease;
   }
 
-  .wrap { max-width: 880px; margin: 0 auto; }
+  /* ============ NỀN BLOB CHUYỂN ĐỘNG ============ */
+  .bg-blobs {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: var(--blob-opacity);
+    transition: opacity .5s ease;
+    will-change: transform;
+  }
+  .blob.b1 { width: 460px; height: 460px; top: -140px; left: -120px;
+    background: radial-gradient(circle, var(--accent), transparent 70%);
+    animation: drift1 22s ease-in-out infinite; }
+  .blob.b2 { width: 520px; height: 520px; top: 8%; right: -180px;
+    background: radial-gradient(circle, var(--accent-2), transparent 70%);
+    animation: drift2 26s ease-in-out infinite; }
+  .blob.b3 { width: 420px; height: 420px; bottom: -160px; left: 30%;
+    background: radial-gradient(circle, var(--accent-3), transparent 70%);
+    animation: drift3 30s ease-in-out infinite; }
 
-  /* ---------- Card ---------- */
+  @keyframes drift1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(90px, 70px) scale(1.15); }
+  }
+  @keyframes drift2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(-110px, 90px) scale(1.1); }
+  }
+  @keyframes drift3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(70px, -90px) scale(1.2); }
+  }
+
+  /* ============ THANH TIẾN TRÌNH CUỘN ============ */
+  .progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    width: 0%;
+    z-index: 100;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+    background-size: 200% 100%;
+    animation: gradientMove 4s linear infinite;
+    box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+
+  /* ============ WRAPPER + GLOW ============ */
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .glow {
+    position: absolute;
+    inset: -10px;
+    border-radius: calc(var(--radius) + 10px);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2), var(--accent-3), var(--accent));
+    background-size: 300% 300%;
+    filter: blur(28px);
+    opacity: .45;
+    z-index: 0;
+    animation: gradientMove 12s ease infinite;
+    transition: opacity .5s ease;
+  }
+  [data-theme="dark"] .glow { opacity: .3; }
+
+  @keyframes gradientMove {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+  }
+
+  /* ============ CARD CHÍNH (GLASSMORPHISM) ============ */
   .profile {
-    background: var(--card);
-    border: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
     border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--card);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
     box-shadow: var(--shadow);
     overflow: hidden;
+    transition: background .5s ease, border-color .5s ease, box-shadow .5s ease;
   }
 
-  /* ---------- Header ---------- */
+  /* Spotlight theo chuột trên toàn card */
+  .profile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      420px circle at var(--px, 50%) var(--py, 50%),
+      color-mix(in srgb, var(--accent) 14%, transparent),
+      transparent 65%
+    );
+    opacity: 0;
+    transition: opacity .45s ease;
+  }
+  .profile:hover::after { opacity: 1; }
+
+  /* ============ HEADER ============ */
   .header {
     position: relative;
-    padding: 84px 28px 28px;
+    padding: 88px 28px 34px;
     text-align: center;
-    background:
-      radial-gradient(600px 200px at 20% 0%, rgba(108, 92, 231, .28), transparent 70%),
-      radial-gradient(600px 220px at 85% 10%, rgba(0, 194, 168, .22), transparent 70%),
-      linear-gradient(135deg, var(--accent), var(--accent-2));
-    background-blend-mode: screen;
-  }
-
-  .avatar {
-    width: 132px; height: 132px;
-    margin: 0 auto 16px;
-    border-radius: 50%;
-    border: 4px solid var(--card);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
     overflow: hidden;
+  }
+  .header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(600px 240px at 18% 0%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%),
+      radial-gradient(600px 260px at 85% 8%, color-mix(in srgb, var(--accent-2) 50%, transparent), transparent 70%),
+      linear-gradient(160deg, color-mix(in srgb, var(--accent) 80%, #000), color-mix(in srgb, var(--accent-2) 75%, #000));
+    opacity: .9;
+  }
+  .header::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ccircle cx='1' cy='1' r='1' fill='%23ffffff' fill-opacity='.25'/%3E%3C/svg%3E");
+    opacity: .5;
+    pointer-events: none;
+  }
+  .header > * { position: relative; z-index: 2; }
+
+  /* ---- Avatar với vòng xoay gradient ---- */
+  .avatar-wrap {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin: 0 auto 20px;
+    animation: riseIn .9s cubic-bezier(.2, .7, .3, 1) both;
+  }
+  .avatar-ring {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #fff, var(--accent-3), var(--accent-2), #fff, var(--accent-3));
+    animation: spin 7s linear infinite;
+    filter: blur(1px);
+  }
+  .avatar-ring::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 85%, #000);
+  }
+  .avatar {
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
     display: grid;
     place-items: center;
-    background: linear-gradient(135deg, #ffffff, #d9e2ff);
-    font-size: 42px;
-    font-weight: 700;
-    color: #4b3fd1;
-    letter-spacing: 1px;
-  }
-  .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-  .name { font-size: 1.9rem; line-height: 1.2; color: #fff; }
-  .role { color: rgba(255, 255, 255, .92); font-weight: 500; margin-top: 4px; }
-  .location { color: rgba(255, 255, 255, .82); font-size: .9rem; margin-top: 6px; }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin-top: 14px;
-    padding: 5px 14px;
-    border-radius: 999px;
-    font-size: .78rem;
-    font-weight: 600;
+    font-size: 46px;
+    font-weight: 800;
+    letter-spacing: 2px;
     color: #fff;
-    background: rgba(255, 255, 255, .18);
-    border: 1px solid rgba(255, 255, 255, .4);
-    backdrop-filter: blur(6px);
+    background: linear-gradient(140deg, var(--accent), var(--accent-2));
+    box-shadow: inset 0 2px 12px rgba(0, 0, 0, .25);
+    overflow: hidden;
+    transition: transform .5s cubic-bezier(.2, .7, .3, 1);
   }
-  .badge::before {
-    content: "";
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: #37ffb0;
-    box-shadow: 0 0 0 3px rgba(55, 255, 176, .28);
-  }
+  .avatar-wrap:hover .avatar { transform: scale(1.06) rotate(-3deg); }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-  /* ---------- Sections ---------- */
-  .body { padding: 28px; display: grid; gap: 32px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  .section-title {
-    font-size: .78rem;
-    text-transform: uppercase;
-    letter-spacing: .14em;
-    color: var(--muted);
-    font-weight: 700;
-    margin-bottom: 12px;
+  /* ---- Tên shimmer ---- */
+  .name {
+    font-size: 2rem;
+    line-height: 1.2;
+    letter-spacing: -.5px;
+    background: linear-gradient(90deg, #ffffff 0%, #d6dcff 25%, #ffffff 50%, #d6dcff 75%, #ffffff 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: riseIn .9s .1s cubic-bezier(.2, .7, .3, 1) both,
+               shine 5s 1s linear infinite;
   }
+  @keyframes shine { to { background-position: 200% center; } }
 
-  .bio { color: var(--muted); max-width: 62ch; }
+  /* ---- Vai trò + con trỏ gõ chữ ---- */
+  .role {
+    color: rgba(255, 255, 255, .94);
+    font-weight: 500;
+    font-size: 1rem;
+    min-height: 1.7em;
+    margin-top: 6px;
+    animation: riseIn .9s .2s cubic-bezier(.2, .7, .3, 1) both;
+  }
+  .caret {
+    display: inline-block;
+    width: 2px;
+    height: 1.05em;
+    margin-left: 3px;
+    vertical-align: -3px;
+    background: #fff;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
 
-  /* ---------- Skills ---------- */
-  .tags { display: flex; flex-wrap: wrap; gap: 8px; }
-  .tag {
-    font-size: .85rem;
-    font-weight: 600;
-    padding: 6px 14px;
-    border-radius: 999px;
-    color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
-  }
-
-  /* ---------- Projects ---------- */
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
-  }
-
-  .project {
-    display: block;
-    padding: 18px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    text-decoration: none;
-    color: inherit;
-    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
-  }
-  .project:hover {
-    transform: translateY(-4px);
-    border-color: var(--accent);
-    box-shadow: 0 12px 24px rgba(108, 92, 231, .16);
-  }
-  .project h3 { font-size: 1rem; margin-bottom: 6px; }
-  .project p { font-size: .88rem; color: var(--muted); }
-  .project .stack {
-    font-size: .78rem;
-    color: var(--accent-2);
-    font-weight: 600;
-    margin-top: 10px;
-    display: block;
-  }
-
-  /* ---------- Buttons ---------- */
-  .links { display: flex; flex-wrap: wrap; gap: 10px; }
-  .btn {
+  /* ---- Trạng thái available ---- */
+  .status {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 18px;
-    border-radius: 12px;
+    margin-top: 14px;
+    padding: 6px 14px;
+    font-size: .82rem;
+    font-weight: 600;
+    color: #fff;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .16);
+    border: 1px solid rgba(255, 255, 255, .35);
+    backdrop-filter: blur(8px);
+    animation: riseIn .9s .3s cubic-bezier(.2, .7, .3, 1) both;
+  }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4dffb8;
+    box-shadow: 0 0 0 0 rgba(77, 255, 184, .7);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(77, 255, 184, .7); }
+    70%  { box-shadow: 0 0 0 10px rgba(77, 255, 184, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(77, 255, 184, 0); }
+  }
+
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* ============ NỘI DUNG ============ */
+  .body {
+    padding: 34px 30px 38px;
+    display: grid;
+    gap: 36px;
+  }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: .76rem;
+    text-transform: uppercase;
+    letter-spacing: .16em;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .section-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border-soft), transparent);
+  }
+
+  .bio {
+    color: var(--muted);
+    max-width: 64ch;
+    font-size: .97rem;
+  }
+
+  /* ---- Reveal khi cuộn ---- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity .8s ease, transform .8s cubic-bezier(.2, .7, .3, 1);
+  }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ============ SKILL TAGS ============ */
+  .tags { display: flex; flex-wrap: wrap; gap: 9px; }
+
+  .tag {
+    position: relative;
+    font-size: .84rem;
+    font-weight: 600;
+    padding: 7px 16px;
+    border-radius: 999px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+    cursor: default;
+    opacity: 0;
+    transform: translateY(12px) scale(.92);
+    transition: opacity .5s cubic-bezier(.2, .7, .3, 1),
+                transform .5s cubic-bezier(.2, .7, .3, 1),
+                color .25s, background .25s, border-color .25s, box-shadow .25s;
+    transition-delay: calc(var(--i, 0) * 55ms);
+  }
+  .reveal.in .tag { opacity: 1; transform: none; }
+
+  .tag:hover {
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: transparent;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 10px 22px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  /* ============ PROJECT CARDS ============ */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 18px;
+    perspective: 1000px;
+  }
+
+  .project {
+    position: relative;
+    display: block;
+    padding: 20px;
+    border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
+    background: var(--card-solid);
+    border: 1px solid var(--border-soft);
+    overflow: hidden;
+    transform-style: preserve-3d;
+    transition: box-shadow .35s ease, border-color .35s ease;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity .6s ease, transform .6s cubic-bezier(.2, .7, .3, 1),
+                box-shadow .35s ease, border-color .35s ease;
+    transition-delay: calc(var(--i, 0) * 90ms);
+  }
+  .reveal.in .project { opacity: 1; transform: none; }
+
+  /* Spotlight bên trong mỗi card dự án */
+  .project::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      260px circle at var(--mx, 50%) var(--my, 50%),
+      color-mix(in srgb, var(--accent) 22%, transparent),
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity .35s ease;
+    pointer-events: none;
+  }
+  .project:hover::before { opacity: 1; }
+
+  .project:hover {
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    box-shadow: 0 22px 40px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+
+  .project h3 {
+    font-size: 1.02rem;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .project h3::after {
+    content: "↗";
+    font-size: .9rem;
+    color: var(--accent);
+    opacity: 0;
+    transform: translate(-4px, 4px);
+    transition: opacity .3s ease, transform .3s ease;
+  }
+  .project:hover h3::after { opacity: 1; transform: none; }
+
+  .project p { font-size: .88rem; color: var(--muted); }
+
+  .project .stack {
+    display: inline-block;
+    font-size: .76rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    margin-top: 12px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    color: var(--accent-2);
+    background: color-mix(in srgb, var(--accent-2) 12%, transparent);
+  }
+
+  /* ============ BUTTONS ============ */
+  .links { display: flex; flex-wrap: wrap; gap: 11px; }
+
+  .btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 11px 20px;
+    border-radius: 13px;
     font-size: .9rem;
     font-weight: 600;
-    font-family: inherit;
     text-decoration: none;
     color: var(--text);
-    background: var(--bg);
-    border: 1px solid var(--border);
-    cursor: pointer;
-    transition: background .2s ease, color .2s ease, transform .2s ease, border-color .2s ease;
+    background: var(--card-solid);
+    border: 1px solid var(--border-soft);
+    overflow: hidden;
+    transition: transform .25s cubic-bezier(.2, .7, .3, 1),
+                color .25s, border-color .25s, box-shadow .25s;
   }
-  .btn:hover { transform: translateY(-2px); border-color: var(--accent); color: var(--accent); }
+
+  /* Hiệu ứng ánh sáng quét qua */
+  .btn::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -130%;
+    width: 55%;
+    height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .6), transparent);
+    transform: skewX(-20deg);
+    transition: left .65s ease;
+    pointer-events: none;
+  }
+  .btn:hover::after { left: 140%; }
+
+  .btn:hover {
+    transform: translateY(-3px);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    box-shadow: 0 12px 26px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
   .btn.primary {
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
     color: #fff;
     border: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    background-size: 200% 200%;
+    animation: gradientMove 6s ease infinite;
+    box-shadow: 0 10px 26px color-mix(in srgb, var(--accent) 40%, transparent);
   }
-  .btn.primary:hover { color: #fff; filter: brightness(1.07); }
-  .btn svg { width: 16px; height: 16px; flex: none; }
+  .btn.primary:hover {
+    color: #fff;
+    filter: brightness(1.08);
+    box-shadow: 0 16px 34px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  .btn.primary::after { background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .75), transparent); }
 
-  /* ---------- Contact form ---------- */
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-  .field { display: grid; gap: 6px; }
-  .field.full { grid-column: 1 / -1; }
+  .btn svg { width: 17px; height: 17px; flex: none; transition: transform .3s ease; }
+  .btn:hover svg { transform: scale(1.15) rotate(-6deg); }
 
-  label {
-    font-size: .82rem;
-    font-weight: 600;
-    color: var(--muted);
-  }
-
-  input, textarea {
-    width: 100%;
-    padding: 11px 14px;
-    font: inherit;
-    font-size: .92rem;
-    color: var(--text);
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 11px;
-    transition: border-color .2s ease, box-shadow .2s ease;
-  }
-  input:focus, textarea:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
-  }
-  textarea { resize: vertical; min-height: 120px; }
-  input.invalid, textarea.invalid { border-color: var(--danger); }
-
-  .error-text { font-size: .78rem; color: var(--danger); font-weight: 500; }
-
-  .honeypot {
-    position: absolute;
-    left: -9999px;
-    width: 1px; height: 1px;
-    overflow: hidden;
-  }
-
-  .alert {
-    padding: 12px 16px;
-    border-radius: 12px;
-    font-size: .88rem;
-    font-weight: 500;
-    margin-bottom: 16px;
-  }
-  .alert.success {
-    color: var(--success);
-    background: color-mix(in srgb, var(--success) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
-  }
-  .alert.error {
-    color: var(--danger);
-    background: color-mix(in srgb, var(--danger) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
-  }
-
-  .form-footer {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 4px;
-  }
-  .hint { font-size: .76rem; color: var(--muted); }
-
-  /* ---------- Footer ---------- */
+  /* ============ FOOTER ============ */
   .footer {
     text-align: center;
-    padding: 18px;
+    padding: 20px;
     font-size: .82rem;
     color: var(--muted);
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--border-soft);
   }
+  .footer span { color: var(--accent); font-weight: 600; }
 
-  /* ---------- Theme toggle ---------- */
+  /* ============ NÚT ĐỔI THEME ============ */
   .toggle {
     position: absolute;
-    top: 14px; right: 14px;
-    width: 42px; height: 42px;
+    top: 16px;
+    right: 16px;
+    z-index: 5;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     border: 1px solid rgba(255, 255, 255, .45);
     background: rgba(255, 255, 255, .18);
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     color: #fff;
     font-size: 1.1rem;
     cursor: pointer;
     display: grid;
     place-items: center;
-    transition: background .2s ease;
+    transition: background .25s ease, transform .5s cubic-bezier(.2, .7, .3, 1);
   }
-  .toggle:hover { background: rgba(255, 255, 255, .32); }
+  .toggle:hover { background: rgba(255, 255, 255, .35); transform: rotate(25deg) scale(1.08); }
+  .toggle:active { transform: rotate(-15deg) scale(.95); }
 
-  /* ---------- Small screens ---------- */
-  @media (max-width: 560px) {
-    .form-grid { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 480px) {
-    .header { padding: 72px 18px 24px; }
-    .body { padding: 22px 18px; }
-    .name { font-size: 1.55rem; }
-    .avatar { width: 108px; height: 108px; font-size: 34px; }
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 520px) {
+    body { padding: 40px 12px 60px; }
+    .header { padding: 76px 18px 28px; }
+    .body { padding: 26px 18px 30px; gap: 30px; }
+    .name { font-size: 1.62rem; }
+    .avatar-wrap { width: 118px; height: 118px; }
+    .avatar { font-size: 36px; }
+    .glow { filter: blur(20px); }
+    .blob { filter: blur(70px); }
   }
 
-  /* Respect reduced-motion preferences */
+  /* ============ TÔN TRỌNG REDUCED MOTION ============ */
   @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
-    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+    .reveal { opacity: 1; transform: none; }
   }
 </style>
 </head>
 
 <body>
+
+<!-- Nền blob chuyển động -->
+<div class="bg-blobs" aria-hidden="true">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+</div>
+
+<!-- Thanh tiến trình cuộn -->
+<div class="progress" id="progress" aria-hidden="true"></div>
+
 <div class="wrap">
-  <main class="profile">
+  <div class="glow" aria-hidden="true"></div>
 
-    <!-- ================= Header ================= -->
+  <main class="profile" id="profile">
+
+    <!-- ================= HEADER ================= -->
     <header class="header">
-      <button class="toggle" id="themeToggle" aria-label="Toggle dark mode">
-        <?= $theme === 'dark' ? '☀️' : '🌙' ?>
-      </button>
+      <button class="toggle" id="themeToggle" aria-label="Đổi giao diện sáng/tối">🌙</button>
 
-      <div class="avatar">
-        <?php if ($hasAvatar): ?>
-          <img src="<?= e($profile['avatar']) ?>" alt="Portrait of <?= e($profile['name']) ?>" />
-        <?php else: ?>
-          <?= e($initials) ?>
-        <?php endif; ?>
+      <div class="avatar-wrap">
+        <div class="avatar-ring" aria-hidden="true"></div>
+        <!-- Thay chữ AM bằng: <img src="avatar.jpg" alt="Alex Morgan"> -->
+        <div class="avatar">AM</div>
       </div>
 
-      <h1 class="name"><?= e($profile['name']) ?></h1>
-      <p class="role"><?= e($profile['role']) ?></p>
-      <p class="location">📍 <?= e($profile['location']) ?></p>
+      <h1 class="name">Alex Morgan</h1>
+      <p class="role"><span id="roleText"></span><span class="caret" aria-hidden="true"></span></p>
 
-      <?php if ($profile['status'] !== ''): ?>
-        <p class="badge"><?= e($profile['status']) ?></p>
-      <?php endif; ?>
+      <div class="status">
+        <span class="dot" aria-hidden="true"></span>
+        Đang sẵn sàng cho dự án freelance
+      </div>
     </header>
 
     <div class="body">
 
-      <!-- ================= About ================= -->
-      <section aria-labelledby="about-title">
-        <h2 class="section-title" id="about-title">About</h2>
-        <p class="bio"><?= e($profile['bio']) ?></p>
+      <!-- ================= GIỚI THIỆU ================= -->
+      <section class="reveal">
+        <h2 class="section-title">Giới thiệu</h2>
+        <p class="bio">
+          Tôi xây dựng những giao diện nhanh, dễ tiếp cận với trọng tâm là hệ thống
+          thiết kế gọn gàng và các vi tương tác đầy cảm hứng. Năm năm kinh nghiệm
+          biến file Figma thành mã nguồn production sẵn sàng chạy.
+        </p>
       </section>
 
-      <!-- ================= Skills ================= -->
-      <section aria-labelledby="skills-title">
-        <h2 class="section-title" id="skills-title">Skills</h2>
-        <div class="tags">
-          <?php foreach ($profile['skills'] as $skill): ?>
-            <span class="tag"><?= e($skill) ?></span>
-          <?php endforeach; ?>
+      <!-- ================= KỸ NĂNG ================= -->
+      <section class="reveal">
+        <h2 class="section-title">Kỹ năng</h2>
+        <div class="tags" id="tags">
+          <span class="tag">HTML5</span>
+          <span class="tag">CSS / Sass</span>
+          <span class="tag">JavaScript</span>
+          <span class="tag">TypeScript</span>
+          <span class="tag">React</span>
+          <span class="tag">Vue</span>
+          <span class="tag">Node.js</span>
+          <span class="tag">Figma</span>
+          <span class="tag">Accessibility</span>
+          <span class="tag">Git</span>
         </div>
       </section>
 
-      <!-- ================= Projects ================= -->
-      <section aria-labelledby="projects-title">
-        <h2 class="section-title" id="projects-title">Selected Projects</h2>
-        <div class="grid">
-          <?php foreach ($profile['projects'] as $project): ?>
-            <a class="project" href="<?= e($project['url']) ?>" target="_blank" rel="noopener noreferrer">
-              <h3><?= e($project['title']) ?></h3>
-              <p><?= e($project['desc']) ?></p>
-              <span class="stack"><?= e($project['stack']) ?></span>
-            </a>
-          <?php endforeach; ?>
+      <!-- ================= DỰ ÁN ================= -->
+      <section class="reveal">
+        <h2 class="section-title">Dự án tiêu biểu</h2>
+        <div class="grid" id="grid">
+          <a class="project" href="#" target="_blank" rel="noopener">
+            <h3>Pulse Analytics</h3>
+            <p>Bảng điều khiển thời gian thực với biểu đồ tùy biến và chế độ tối.</p>
+            <span class="stack">React · D3 · Tailwind</span>
+          </a>
+
+          <a class="project" href="#" target="_blank" rel="noopener">
+            <h3>Orbit Commerce</h3>
+            <p>Cửa hàng headless đạt điểm hiệu năng Lighthouse 98.</p>
+            <span class="stack">Next.js · Stripe</span>
+          </a>
+
+          <a class="project" href="#" target="_blank" rel="noopener">
+            <h3>Nomad Notes</h3>
+            <p>Ứng dụng ghi chú PWA hoạt động offline, đồng bộ cục bộ.</p>
+            <span class="stack">Vue · IndexedDB</span>
+          </a>
         </div>
       </section>
 
-      <!-- ================= Links ================= -->
-      <section aria-labelledby="links-title">
-        <h2 class="section-title" id="links-title">Get in touch</h2>
+      <!-- ================= LIÊN HỆ ================= -->
+      <section class="reveal">
+        <h2 class="section-title">Kết nối</h2>
         <div class="links">
-          <?php foreach ($profile['links'] as $link): ?>
-            <a class="btn<?= $link['primary'] ? ' primary' : '' ?>"
-               href="<?= e($link['url']) ?>"
-               <?= str_starts_with($link['url'], 'http') ? 'target="_blank" rel="noopener noreferrer"' : '' ?>>
-              <?= icon($link['icon']) ?>
-              <?= e($link['label']) ?>
-            </a>
-          <?php endforeach; ?>
+          <a class="btn primary" href="mailto:alex@example.com">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+              <path d="m22 7-10 6L2 7"></path>
+            </svg>
+            Gửi email
+          </a>
+
+          <a class="btn" href="https://github.com/" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.1c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.4-1.3-5.4-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.5 4.7 18.5 5 18.5 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.4 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5Z"/>
+            </svg>
+            GitHub
+          </a>
+
+          <a class="btn" href="https://linkedin.com/" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9h4v12H3V9Zm6.5 0h3.8v1.7h.1c.5-1 1.8-2 3.7-2 4 0 4.7 2.5 4.7 5.8V21h-4v-5.6c0-1.3 0-3-1.9-3s-2.2 1.4-2.2 2.9V21h-4V9Z"/>
+            </svg>
+            LinkedIn
+          </a>
+
+          <a class="btn" href="#" download>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <path d="M7 10l5 5 5-5"></path>
+              <path d="M12 15V3"></path>
+            </svg>
+            Tải CV
+          </a>
         </div>
-      </section>
-
-      <!-- ================= Contact form ================= -->
-      <section id="contact" aria-labelledby="contact-title">
-        <h2 class="section-title" id="contact-title">Send a message</h2>
-
-        <?php if ($flash !== null): ?>
-          <div class="alert success" role="status"><?= e($flash) ?></div>
-        <?php endif; ?>
-
-        <?php if (isset($errors['form'])): ?>
-          <div class="alert error" role="alert"><?= e($errors['form']) ?></div>
-        <?php endif; ?>
-
-        <form method="post" action="#contact" class="form-grid" novalidate>
-          <input type="hidden" name="csrf" value="<?= e($_SESSION['csrf']) ?>" />
-
-          <!-- Honeypot: hidden from humans, tempting to bots -->
-          <div class="honeypot" aria-hidden="true">
-            <label for="website">Website</label>
-            <input type="text" id="website" name="website" tabindex="-1" autocomplete="off" />
-          </div>
-
-          <div class="field">
-            <label for="name">Name</label>
-            <input type="text" id="name" name="name" required maxlength="60"
-                   value="<?= e($old['name']) ?>"
-                   class="<?= isset($errors['name']) ? 'invalid' : '' ?>"
-                   aria-describedby="<?= isset($errors['name']) ? 'err-name' : '' ?>" />
-            <?php if (isset($errors['name'])): ?>
-              <span class="error-text" id="err-name"><?= e($errors['name']) ?></span>
-            <?php endif; ?>
-          </div>
-
-          <div class="field">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required maxlength="120"
-                   value="<?= e($old['email']) ?>"
-                   class="<?= isset($errors['email']) ? 'invalid' : '' ?>"
-                   aria-describedby="<?= isset($errors['email']) ? 'err-email' : '' ?>" />
-            <?php if (isset($errors['email'])): ?>
-              <span class="error-text" id="err-email"><?= e($errors['email']) ?></span>
-            <?php endif; ?>
-          </div>
-
-          <div class="field full">
-            <label for="message">Message</label>
-            <textarea id="message" name="message" required minlength="10" maxlength="2000"
-                      class="<?= isset($errors['message']) ? 'invalid' : '' ?>"
-                      aria-describedby="<?= isset($errors['message']) ? 'err-message' : '' ?>"><?= e($old['message']) ?></textarea>
-            <?php if (isset($errors['message'])): ?>
-              <span class="error-text" id="err-message"><?= e($errors['message']) ?></span>
-            <?php endif; ?>
-          </div>
-
-          <div class="form-footer">
-            <button class="btn primary" type="submit">
-              <?= icon('mail') ?>
-              Send message
-            </button>
-            <span class="hint">Your details are never shared.</span>
-          </div>
-        </form>
       </section>
 
     </div>
 
     <footer class="footer">
-      © <?= date('Y') ?> <?= e($profile['name']) ?> — Built with PHP.
-      <?php if ($views > 0): ?>
-        · <?= number_format($views) ?> profile view<?= $views === 1 ? '' : 's' ?>
-      <?php endif; ?>
+      © <span id="year"></span> <span>Alex Morgan</span> — Viết tay từ đầu.
     </footer>
   </main>
 </div>
 
 <script>
-  // Theme toggle — persisted in a cookie so PHP can render the right theme on load
-  (function () {
-    const root = document.documentElement;
-    const toggle = document.getElementById('themeToggle');
+/* ================= 1. NĂM HIỆN TẠI ================= */
+document.getElementById('year').textContent = new Date().getFullYear();
 
-    toggle.addEventListener('click', () => {
-      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      root.setAttribute('data-theme', next);
-      toggle.textContent = next === 'dark' ? '☀️' : '🌙';
-      document.cookie = 'theme=' + next + ';path=/;max-age=31536000;samesite=lax';
-    });
-  })();
+/* ================= 2. ĐỔI THEME (lưu lựa chọn) ================= */
+const root   = document.documentElement;
+const toggle = document.getElementById('themeToggle');
+const saved  = localStorage.getItem('theme');
 
-  // Client-side nicety: keep focus on the first invalid field after a failed submit
-  (function () {
-    const firstInvalid = document.querySelector('.invalid');
-    if (firstInvalid && location.hash === '#contact') {
-      firstInvalid.focus({ preventScroll: false });
+if (saved) root.setAttribute('data-theme', saved);
+toggle.textContent = root.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+
+toggle.addEventListener('click', () => {
+  const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  root.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  toggle.textContent = next === 'dark' ? '☀️' : '🌙';
+});
+
+/* ================= 3. HIỆU ỨNG GÕ CHỮ ================= */
+const roles = [
+  'Front-End Developer & UI Engineer',
+  'Design Systems Architect',
+  'CSS Animator',
+  'Accessibility Advocate'
+];
+const roleEl = document.getElementById('roleText');
+let ri = 0, ci = 0, deleting = false;
+
+(function type() {
+  const word = roles[ri];
+
+  if (!deleting) {
+    ci++;
+    roleEl.textContent = word.slice(0, ci);
+    if (ci === word.length) {
+      deleting = true;
+      return setTimeout(type, 1800);
     }
-  })();
+    return setTimeout(type, 55);
+  }
+
+  ci--;
+  roleEl.textContent = word.slice(0, ci);
+  if (ci === 0) {
+    deleting = false;
+    ri = (ri + 1) % roles.length;
+    return setTimeout(type, 320);
+  }
+  setTimeout(type, 28);
+})();
+
+/* ================= 4. CHỈ SỐ STAGGER CHO TAG & PROJECT ================= */
+document.querySelectorAll('.tag').forEach((el, i) => el.style.setProperty('--i', i));
+document.querySelectorAll('.project').forEach((el, i) => el.style.setProperty('--i', i));
+
+/* ================= 5. REVEAL KHI CUỘN ================= */
+const io = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('in');
+      io.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+/* ================= 6. SPOTLIGHT THEO CHUỘT TRÊN CARD ================= */
+const profile = document.getElementById('profile');
+let rafProfile = null;
+
+profile.addEventListener('mousemove', (e) => {
+  if (rafProfile) return;
+  rafProfile = requestAnimationFrame(() => {
+    const r = profile.getBoundingClientRect();
+    profile.style.setProperty('--px', (e.clientX - r.left) + 'px');
+    profile.style.setProperty('--py', (e.clientY - r.top) + 'px');
+    rafProfile = null;
+  });
+});
+
+/* ================= 7. NGHIÊNG 3D + SPOTLIGHT CHO PROJECT CARD ================= */
+const canTilt = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+document.querySelectorAll('.project').forEach((card) => {
+  let raf = null;
+
+  card.addEventListener('mousemove', (e) => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      const r = card.getBoundingClientRect();
+      const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+
+      // Spotlight bên trong card
+      card.style.setProperty('--mx', x + 'px');
+      card.style.setProperty('--my', y + 'px');
+
+      // Nghiêng 3D nhẹ
+      if (canTilt) {
+        const rx = ((y / r.height) - 0.5) * -9;
+        const ry = ((x / r.width)  - 0.5) *  9;
+        card.style.transform =
+          `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-6px) scale(1.02)`;
+      }
+      raf = null;
+    });
+  });
+
+  card.addEventListener('mouseleave', () => {
+    card.style.transform = '';
+  });
+});
+
+/* ================= 8. THANH TIẾN TRÌNH CUỘN ================= */
+const bar = document.getElementById('progress');
+let rafScroll = null;
+
+window.addEventListener('scroll', () => {
+  if (rafScroll) return;
+  rafScroll = requestAnimationFrame(() => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+    rafScroll = null;
+  });
+}, { passive: true });
 </script>
 </body>
 </html>
